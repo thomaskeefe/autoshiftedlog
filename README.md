@@ -12,6 +12,6 @@ selects the shift parameter that minimizes either
 ```python
 from autoshiftedlog import autoshiftedlog
 
-data = np.array([2, 5, 23, 5, np.nan])
+data = numpy.array([1, 1, 2, 2, 2.5, 3, 3, 4.5, 6, 8, 10, 20, 30, 80, 0, numpy.nan])
 data = autoshiftedlog(data)
 ```
