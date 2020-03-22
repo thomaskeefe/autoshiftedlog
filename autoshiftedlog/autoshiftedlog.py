@@ -1,7 +1,7 @@
 import scipy.stats
 import numpy as np
 from numpy import sign, abs, exp, log, pi, sqrt
-from numpy import nanmean as mean, nanstd as std, nanmedian as median
+from numpy import nanmean as mean, nanstd as std, nanmedian as median, nanmin as min, nanmax as max
 
 def _skew(vector):
     return scipy.stats.skew(vector, nan_policy='omit')
@@ -46,7 +46,7 @@ def _shiftedlog(vector, shift):
     # results from Marron's version
 
     if IQR == 0:
-        data_range = max(vector) - min(vector)  # NOTE: this is nan-safe
+        data_range = max(vector) - min(vector)
     else:
         data_range = IQR
 
