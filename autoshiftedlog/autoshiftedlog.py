@@ -38,10 +38,7 @@ def _winsorize(vector):
     vector[vector < -threshold] = -threshold
     return vector
 
-def _shiftedlog(vector, shift):
-    "Apply shifted log transformation with the given shift"
-    beta = sign(shift) * (exp(abs(shift))-1)
-
+def _get_data_range(vector):
     IQR = scipy.stats.iqr(vector, nan_policy='omit')
     # TODO: Scipy computes IQR slightly differently
     # from MATLAB. This leads to slightly different
@@ -51,6 +48,17 @@ def _shiftedlog(vector, shift):
         data_range = max(vector) - min(vector)
     else:
         data_range = IQR
+
+    return data_range
+
+def _shiftedlog(vector, shift, _data_range=None):
+    "Apply shifted log transformation with the given shift"
+    beta = sign(shift) * (exp(abs(shift))-1)
+
+    if _data_range is not None:
+        data_range = _data_range
+    else:
+        data_range = _get_data_range(vector)
 
     # Transform data based on sign of beta
     if beta == 0:
@@ -100,6 +108,8 @@ def autoshiftedlog(vector, score_function='Anderson Darling', verbose=False):
         vector[~np.isnan(vector)] = 0
         return vector
 
+    data_range = _get_data_range(vector)  # computing this in advance speeds up the search
+
     # Set up an array of possible shift values to try
     if _skew(vector) > 0:
         shifts = np.arange(0.0, 9.0, step=0.01)
@@ -107,12 +117,12 @@ def autoshiftedlog(vector, score_function='Anderson Darling', verbose=False):
         shifts = -np.arange(0.0, 9.0, step=0.01)
 
     # Find the shift that minimizes the desired score function
-    scores = [score(_shiftedlog(vector, s)) for s in shifts]
+    scores = [score(_shiftedlog(vector, s, data_range)) for s in shifts]
 
     minimizing_index = np.argmin(scores)
 
     best_shift = shifts[minimizing_index]
-    best_transformation = _shiftedlog(vector, best_shift)
+    best_transformation = _shiftedlog(vector, best_shift, data_range)
 
     if verbose:
         best_beta = sign(best_shift) * (exp(abs(best_shift))-1)
