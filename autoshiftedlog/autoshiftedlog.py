@@ -3,6 +3,9 @@ import numpy as np
 from numpy import sign, abs, exp, log, pi, sqrt
 from numpy import nanmean as mean, nanstd as std, nanmedian as median, nanmin as min, nanmax as max
 
+# .95 quantile of Extreme Value Distribution
+_gumble_p95 = scipy.stats.gumbel_l.ppf(.95)
+
 def _skew(vector):
     return scipy.stats.skew(vector, nan_policy='omit')
 
@@ -25,7 +28,7 @@ def _andersondarling(vector):
 def _winsorize(vector):
     "Winsorize based on 95th percentile of extreme value distribution"
     n = np.count_nonzero(~np.isnan(vector))
-    gumble_p95 = scipy.stats.gumbel_l.ppf(.95)
+    gumble_p95 = _gumble_p95  # cache this call for speed
     a_n = (2*log(n))**(-0.5)
     b_n = (2*log(n) - log(log(n)) - log(4*pi))**0.5
     threshold = gumble_p95 * a_n + b_n
@@ -37,7 +40,6 @@ def _winsorize(vector):
 
 def _shiftedlog(vector, shift):
     "Apply shifted log transformation with the given shift"
-    n = np.count_nonzero(~np.isnan(vector))
     beta = sign(shift) * (exp(abs(shift))-1)
 
     IQR = scipy.stats.iqr(vector, nan_policy='omit')
@@ -60,14 +62,16 @@ def _shiftedlog(vector, shift):
         alpha = abs(1.0/beta)
         vector = -log(max(vector) - vector + alpha*data_range)
 
-    MAD = mean(abs(vector - median(vector))) * sqrt(pi / 2)
+    vector_median = median(vector)
+
+    MAD = mean(abs(vector - vector_median)) * sqrt(pi / 2)
 
     if MAD == 0:
         # if the MAD is 0, just return zeroes but retain nans.
         vector[~np.isnan(vector)] = 0
         return vector
 
-    vector = (vector - median(vector)) / MAD
+    vector = (vector - vector_median) / MAD
     vector = _winsorize(vector)
     vector = (vector - mean(vector)) / std(vector, ddof=1)
 
